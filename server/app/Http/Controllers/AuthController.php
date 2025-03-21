@@ -10,6 +10,15 @@ use Illuminate\Support\Facades\Auth;
 class AuthController extends Controller
 {
     function login(Request $request){
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email|max:255',
+            'password' => 'required|string|min:8',
+        ]);
+    
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+    
         $credentials = [
             "email" => $request["email"], 
             "password"=> $request["password"]
@@ -27,7 +36,10 @@ class AuthController extends Controller
 
         return response()->json([
             "success" => true,
-            "user" => $user
+            "user" => $user,
+            "access_token" => $token,
+            "token_type" => "bearer",
+            "expires_in" => auth()->factory()->getTTL() * 60
         ]);
     }
 

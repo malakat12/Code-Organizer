@@ -1,0 +1,120 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Tag;
+use App\Models\Snippet;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class SnippetController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $snippets = Snippet::with('tags')->where('user_id', Auth::id())->get();
+        if ($snippets->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No snippets found',
+                'snippets' => []
+            ], 200);
+        }
+    
+        return response()->json([
+            'success' => true,
+            'snippets' => $snippets
+        ], 200);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'code' => 'required|string',
+            'language' => 'required|string',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:255',
+        ]);    
+
+        $snippet = Snippet::create([
+            'user_id' => Auth::id(), 
+            'title' => $request->title,
+            'code' => $request->code,
+            'language' => $request->language,
+        ]);
+
+        if ($request->tags) {
+            foreach ($request->tags as $tagName) {
+                $tag = Tag::firstOrCreate(['name' => $tagName]);
+                $snippet->tags()->attach($tag->id);
+            }
+        }
+
+        return response()->json([
+            'snippet' => $snippet,
+            'tags' => $snippet->tags,
+        ], 201);
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id)
+    {
+        $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
+        return response()->json([
+            "success" => "true",
+            "snipppet" => $snippet
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function updateSnippet(Request $request, string $id)
+    {
+        $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
+        
+        $request->validate([
+            'title' => 'sometimes|string|max:255',
+            'code' => 'sometimes|string',
+            'language' => 'sometimes|string',
+            'tags' => 'sometimes|nullable|array',
+            'is_favorite'=>'sometimes|boolean',
+        ]);  
+
+        $snippet->update($request->all);
+        return response()->json([
+            "success" => "true",
+            "snipppet" => $snippet
+        ]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
+        $snippet->delete();
+        return response()->json(null);
+    }
+
+    public function toggleFavorite($id){
+        $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
+        $snippet->is_favorite = !$snippet->is_favorite;
+        $snippet->save();
+        return response()->json($snippet);
+    }
+
+    public function search($query)
+    {
+        return $query;
+    }
+}
