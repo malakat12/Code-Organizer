@@ -50,13 +50,13 @@ class SnippetController extends Controller
         ]);
 
         if ($request->tags) {
+            $tagIds = [];
             foreach ($request->tags as $tagName) {
                 $tag = Tag::firstOrCreate(['name' => $tagName]);
-                $snippet->tags()->attach($tag->id);
+                $tagIds[] = $tag->id;
             }
+            $snippet->tags()->sync($tagIds);
         }
-
-        $snippet->load('tags');
 
         return response()->json([
             'status' => 'success',
@@ -76,7 +76,7 @@ class SnippetController extends Controller
         $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
         return response()->json([
             "success" => "true",
-            "snipppet" => $snippet
+            "snippet" => $snippet
         ]);
     }
 
@@ -96,7 +96,17 @@ class SnippetController extends Controller
             'is_favorite'=>'sometimes|boolean',
         ]);  
 
-        $snippet->update($request->all);
+        $snippet->update($request->except('tags'));
+
+        if ($request->has('tags')) {
+            $tagIds = [];
+            foreach ($request->tags as $tagName) {
+                $tag = Tag::firstOrCreate(['name' => $tagName]);
+                $tagIds[] = $tag->id;
+            }
+            $snippet->tags()->sync($tagIds);
+        }
+
         return response()->json([
             "success" => "true",
             "snipppet" => $snippet
@@ -110,18 +120,38 @@ class SnippetController extends Controller
     {
         $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
         $snippet->delete();
-        return response()->json(null);
+        return response()->json([
+            'success' => true,
+            'message' => 'Snippet deleted successfully'
+        ], 200);
     }
 
     public function toggleFavorite($id){
         $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
         $snippet->is_favorite = !$snippet->is_favorite;
         $snippet->save();
-        return response()->json($snippet);
+        return response()->json([
+            'success' => true,
+            'snippet' => $snippet
+        ]);
     }
 
-    public function search($query)
+    public function search(Request $request)
     {
-        return $query;
+        $query = $request->query('q'); 
+
+        $snippets = Snippet::where('user_id', Auth::id())
+            ->where(function ($q) use ($query) {
+                $q->where('title', 'LIKE', "%$query%")
+                  ->orWhere('language', 'LIKE', "%$query%")
+                  ->orWhereHas('tags', function ($tagQuery) use ($query) {
+                      $tagQuery->where('name', 'LIKE', "%$query%");
+                  });
+            })->with('tags')->get();
+
+        return response()->json([
+            'success' => true,
+            'snippets' => $snippets
+        ]);
     }
 }
