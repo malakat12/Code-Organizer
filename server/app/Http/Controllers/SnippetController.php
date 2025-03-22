@@ -56,9 +56,15 @@ class SnippetController extends Controller
             }
         }
 
+        $snippet->load('tags');
+
         return response()->json([
-            'snippet' => $snippet,
-            'tags' => $snippet->tags,
+            'status' => 'success',
+            'message' => 'Snippet created successfully.',
+            'data' => [
+                'snippet' => $snippet,
+                'tags' => $snippet->tags,
+            ],
         ], 201);
     }
 
@@ -85,7 +91,8 @@ class SnippetController extends Controller
             'title' => 'sometimes|string|max:255',
             'code' => 'sometimes|string',
             'language' => 'sometimes|string',
-            'tags' => 'sometimes|nullable|array',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:255',
             'is_favorite'=>'sometimes|boolean',
         ]);  
 
