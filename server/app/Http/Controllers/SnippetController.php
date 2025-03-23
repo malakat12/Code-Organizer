@@ -12,6 +12,7 @@ class SnippetController extends Controller
     /**
      * Display a listing of the resource.
      */
+
     public function index()
     {
         $snippets = Snippet::with('tags')->where('user_id', Auth::id())->get();
@@ -73,7 +74,16 @@ class SnippetController extends Controller
      */
     public function show(string $id)
     {
-        $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
+        echo "here!!";
+        $snippet = Snippet::where('user_id', Auth::id())
+        ->where('id', $id)
+        ->first();         
+        if (!$snippet) {
+            return response()->json([
+                "success" => false,
+                "message" => "Snippet not found or does not belong to the authenticated user."
+            ], 404);
+        }
         return response()->json([
             "success" => "true",
             "snippet" => $snippet
@@ -83,7 +93,7 @@ class SnippetController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function updateSnippet(Request $request, string $id)
+    public function update(Request $request,  $id)
     {
         $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
         
@@ -138,8 +148,22 @@ class SnippetController extends Controller
 
     public function search(Request $request)
     {
-        $query = $request->query('q'); 
 
+        $query = $request->query('q');        
+        if (!$query) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Search query is required'
+            ], 400);
+        }
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+        
         $snippets = Snippet::where('user_id', Auth::id())
             ->where(function ($q) use ($query) {
                 $q->where('title', 'LIKE', "%$query%")
@@ -151,6 +175,7 @@ class SnippetController extends Controller
 
         return response()->json([
             'success' => true,
+            'message' => $snippets->isEmpty() ? 'No snippets found' : 'Snippets retrieved successfully',
             'snippets' => $snippets
         ]);
     }

@@ -5,32 +5,38 @@ namespace App\Http\Controllers;
 use Validator;
 
 use App\Models\User;
+
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\SignupRequest;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
+
     function login(LoginRequest $request)
     {
         $credentials = $request->only('email', 'password');
 
-        if (!$token = Auth()->attempt($credentials)) {
+        $token = Auth::attempt($credentials);
+        if (!$token) {
             return response()->json([
                 "success" => false,
                 "error" => "Unauthorized"
             ], 401);
         }
 
-        $user = auth()->user();
+        $user = Auth::user();
 
         return response()->json([
             "success" => true,
             "user" => $user,
-            "access_token" => $token,
-            "token_type" => "bearer",
-            "expires_in" => auth()->factory()->getTTL() * 60
+            'authorization' => [
+                    'token' => $token,
+                    'type' => 'bearer',
+            ]
         ]);
     }
 
@@ -38,23 +44,24 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => bcrypt($request->password),
+            'password' => Hash::make($request->password),
         ]);
         
-        $token = Auth()->login($user);
+        $token = Auth::login($user);
 
         return response()->json([
             "success" => true,
             "user" => $user,
-            "access_token" => $token,
-            "token_type" => "bearer",
-            "expires_in" => auth()->factory()->getTTL() * 60
+            'authorization' => [
+                'token' => $token,
+                'type' => 'bearer',
+            ]
         ], 201);
     }
 
     public function logout()
     {
-        auth()->logout();
+        auth::logout();
 
         return response()->json([
             'success' => true,
@@ -78,6 +85,18 @@ class AuthController extends Controller
         return response()->json([
             "success" => true,
             "user" => $user
+        ]);
+    }
+
+    public function refresh()
+    {
+        return response()->json([
+            'status' => 'success',
+            'user' => Auth::user(),
+            'authorization' => [
+                'token' => Auth::refresh(),
+                'type' => 'bearer',
+            ]
         ]);
     }
 }
