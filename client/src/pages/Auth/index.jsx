@@ -31,20 +31,23 @@ const Auth = () => {
     const response = await request({
       method: requestMethods.POST,
       route: "/guest/login",
-      body: form,
-      withCredentials: true, 
+      body: form,  
     });
 
-    if (response.success) {
-      localStorage.setItem("user_id", response.user.id); 
+    if (response.success && response.authorization?.token) {
+      localStorage.setItem("user_id", response.user.id);
+      localStorage.setItem("token", response.authorization.token); 
+
       console.log(response);
+      
       navigate("/home");
+
     } else {
       setErrorMessage(response.message || "Login failed. Please check your credentials.");
     }
     } catch (err) {
       console.error("Login error:", err);
-      setError("An error occurred. Please try again.");
+      setErrorMessage("An error occurred. Please try again.");
     }
 
   };

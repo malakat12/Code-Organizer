@@ -12,6 +12,7 @@ class SnippetController extends Controller
     /**
      * Display a listing of the resource.
      */
+
     public function index()
     {
         $snippets = Snippet::with('tags')->where('user_id', Auth::id())->get();
@@ -83,7 +84,7 @@ class SnippetController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function updateSnippet(Request $request, string $id)
+    public function update(Request $request,  $id)
     {
         $snippet= Snippet::where('user_id',  Auth::id())->findOrFail($id);
         

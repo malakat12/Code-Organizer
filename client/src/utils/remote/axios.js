@@ -6,17 +6,21 @@ axios.defaults.headers = {
   "Content-Type": "application/json",
 };
 
-export const request = async ({ method, route, body, headers }) => {
+export const request = async ({ method, route, body, headers,token=null }) => {
   try {
+    const requestHeaders = {
+      ...headers,
+    };
+
+    if (token) {
+      requestHeaders.Authorization = `Bearer ${token}`;
+    }
     const response = await axios.request({
       method, 
-      headers:{
-        ...headers,
-      },
+      headers:requestHeaders,
       url: route,
       data: body,
     });
-
     return response.data;
   } catch (error) {
     console.error("API Request Error:", error); 
