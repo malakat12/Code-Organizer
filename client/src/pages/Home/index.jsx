@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { request } from "../../utils/remote/axios";
 import { requestMethods } from "../../utils/enums/request.methods";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import "./style.css";
 
 const Home = () => {
+  const navigate = useNavigate();
 
   const [snippets, setSnippets] = useState([]);
   const [newSnippet, setNewSnippet] = useState({ title: "", language: "", code: "", tags: "" });
@@ -45,20 +47,26 @@ const Home = () => {
       return;
     }
     try {
+      const payload = {
+        title: newSnippet.title,
+        language: newSnippet.language,
+        code: newSnippet.code,
+        tags: newSnippet.tags
+        ? newSnippet.tags.split(",").map(tag => tag.trim()) // Convert string to array
+        : [],
+      };
+      console.log("Payload:", JSON.stringify(payload, null, 2));
       const response = await request({
         method: requestMethods.POST,
         route: "/snippets",
         token,
-        data: {
-          title: newSnippet.title,
-          language: newSnippet.language,
-          code: newSnippet.code,
-          tags: newSnippet.tags.split(",").map(tag => tag.trim()), 
-        },
+        body: payload,
       });
-  
-      if (response.success && response.snippet) {
-        setSnippets((prev) => [...prev, response.snippet]);
+      console.log("API Response:", response);
+      if (response.status === "success" && response.data?.snippet) {
+        setSnippets((prev) => [...prev, response.data.snippet]);
+        console.log("Snippet added successfully:", response.data.snippet);
+
       } else {
         console.error("Unexpected response structure:", response);
       } 
@@ -78,10 +86,14 @@ const Home = () => {
     try {
       const response = await request({
         method: requestMethods.GET,
-        route: `/snippets/search?query=${searchQuery}`,
+        route: "/snippets/search",
         token,
+        params: { q: searchQuery },
       });
-  
+      if(!response){
+        console.log(response);
+        navigate("/");
+      }
       setSnippets(response.snippets || []); 
     } catch (error) {
       console.error("Search error:", error);
@@ -137,7 +149,9 @@ const Home = () => {
         Search
       </button>
       <ul>
-        {snippets.map((snippet) => (
+        {snippets
+  ?.filter(snippet => snippet && snippet.title) // Ensure valid objects
+  .map((snippet) =>(
           <li key={snippet.id}>
             <h2>{snippet.title}</h2>
             <code>
